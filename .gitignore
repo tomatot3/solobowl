@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.runtime/
+.env
+.env.*
+!.env.example
+*.log
+*.pid
+*.pem
+*.key
+.DS_Store
+Thumbs.db
+src/content.js
+backups/
+docs/*.docx

@@ -1,0 +1,13 @@
+﻿旧ID,名称,目标RecipeId,目标MealId,默认VariantId,成餐类型,内容状态
+suantang,酸汤豆腐米线,recipe-suantang,meal-suantang,suantang-tofu,meal,待按合同整理；目标缺失时保留为旧资料
+tomato,番茄鸡蛋盖饭,recipe-tomato-egg,meal-tomato-rice,tomato-egg-rice,meal,待按合同整理；目标缺失时保留为旧资料
+potato,酸辣土豆丝,recipe-potato,dish-potato,potato-sour-spicy,side,待按合同整理；目标缺失时保留为旧资料
+scallion,葱油拌面,recipe-scallion-noodle,meal-scallion-noodle,scallion-oil-noodle,meal,待按合同整理；目标缺失时保留为旧资料
+sesame,芝麻酱拌面,recipe-sesame-noodle,meal-sesame-noodle,sesame-noodle,meal,待按合同整理；目标缺失时保留为旧资料
+cabbage,白菜鸡蛋汤面,recipe-cabbage,meal-cabbage,cabbage-egg-clear,meal,待按合同整理；目标缺失时保留为旧资料
+mushroom,香菇青菜焖饭,recipe-mushroom-rice,meal-mushroom-rice,mushroom-greens-rice,meal,待按合同整理；目标缺失时保留为旧资料
+pumpkin,南瓜小米粥,recipe-pumpkin-millet,soup-pumpkin-millet,pumpkin-millet-porridge,soup,待按合同整理；目标缺失时保留为旧资料
+radish,萝卜豆腐汤,recipe-radish-tofu,soup-radish-tofu,radish-tofu-soup,soup,待按合同整理；目标缺失时保留为旧资料
+lotus,莲藕香菇汤,recipe-lotus-mushroom,soup-lotus-mushroom,lotus-mushroom-soup,soup,待按合同整理；目标缺失时保留为旧资料
+egg-soup,紫菜蛋花汤,recipe-seaweed-egg,soup-seaweed-egg,seaweed-egg-soup,soup,待按合同整理；目标缺失时保留为旧资料
+pepper-tofu,青椒豆腐盖饭,recipe-pepper-tofu,meal-pepper-tofu-rice,pepper-tofu-rice,meal,待按合同整理；目标缺失时保留为旧资料

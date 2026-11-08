@@ -1,0 +1,17 @@
+{
+  "name": "solobowl",
+  "version": "1.0.0",
+  "private": true,
+  "description": "食有数 SoloBowl，一人食家常菜与自己的做法",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "start": "node scripts/serve.cjs",
+    "service:start": "node scripts/manage.cjs start",
+    "service:stop": "node scripts/manage.cjs stop",
+    "service:restart": "node scripts/manage.cjs restart",
+    "service:status": "node scripts/manage.cjs status",
+    "autostart:install": "node scripts/autostart.cjs install",
+    "autostart:remove": "node scripts/autostart.cjs remove"
+  }
+}

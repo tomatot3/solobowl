@@ -1,0 +1,985 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "食有数第一版内容与存储合同",
+  "$ref": "#/$defs/Catalog",
+  "$defs": {
+    "Source": {
+      "type": "object",
+      "properties": {
+        "contentRelease": {
+          "type": "string"
+        },
+        "mealId": {
+          "type": "string"
+        },
+        "mealRev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "variantId": {
+          "type": "string"
+        },
+        "variantRev": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "contentRelease",
+        "mealId",
+        "mealRev",
+        "variantId",
+        "variantRev"
+      ],
+      "additionalProperties": false
+    },
+    "Recipe": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "dish",
+            "staple",
+            "soup",
+            "mixed"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "rev",
+        "title",
+        "kind",
+        "sources"
+      ],
+      "additionalProperties": false
+    },
+    "Meal": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "recipeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "defaultVariantId": {
+          "type": "string"
+        },
+        "variantIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        },
+        "editorialRank": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "rev",
+        "recipeIds",
+        "defaultVariantId",
+        "variantIds",
+        "aliases",
+        "tags",
+        "editorialRank"
+      ],
+      "additionalProperties": false
+    },
+    "Ingredient": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "required",
+            "optional"
+          ]
+        },
+        "flavorKey": {
+          "type": "boolean"
+        },
+        "amount": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "type": "string"
+        },
+        "householdText": {
+          "type": "string"
+        },
+        "purchaseNote": {
+          "type": "string"
+        },
+        "isMain": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "role",
+        "flavorKey",
+        "amount",
+        "unit",
+        "householdText",
+        "purchaseNote",
+        "isMain"
+      ],
+      "additionalProperties": false
+    },
+    "Use": {
+      "type": "object",
+      "properties": {
+        "ingredientId": {
+          "type": "string"
+        },
+        "fraction": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "ingredientId",
+        "fraction"
+      ],
+      "additionalProperties": false
+    },
+    "Step": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "phase": {
+          "enum": [
+            "prepare",
+            "cook",
+            "finish"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "instructions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "uses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Use"
+          },
+          "minItems": 0
+        },
+        "cues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "timerSeconds": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "id",
+        "phase",
+        "title",
+        "instructions",
+        "uses",
+        "cues",
+        "timerSeconds"
+      ],
+      "additionalProperties": false
+    },
+    "Time": {
+      "type": "object",
+      "properties": {
+        "totalMinutes": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "activeMinutes": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "basis": {
+          "const": "editorial"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "totalMinutes",
+        "activeMinutes",
+        "basis",
+        "conditions"
+      ],
+      "additionalProperties": false
+    },
+    "Equipment": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "count"
+      ],
+      "additionalProperties": false
+    },
+    "Prerequisite": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "required"
+      ],
+      "additionalProperties": false
+    },
+    "FlavorOption": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "amounts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ingredientId": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "ingredientId",
+              "amount"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "group",
+        "label",
+        "amounts"
+      ],
+      "additionalProperties": false
+    },
+    "Plan": {
+      "type": "object",
+      "properties": {
+        "servings": {
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "mealRole": {
+          "enum": [
+            "meal",
+            "side",
+            "soup"
+          ]
+        },
+        "composition": {
+          "type": "string"
+        },
+        "flavorNote": {
+          "type": "string"
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Prerequisite"
+          },
+          "minItems": 0
+        },
+        "ingredients": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Ingredient"
+          },
+          "minItems": 1
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Step"
+          },
+          "minItems": 1
+        },
+        "time": {
+          "$ref": "#/$defs/Time"
+        },
+        "equipment": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Equipment"
+          },
+          "minItems": 1
+        },
+        "troubleshooting": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": {
+                "type": "string"
+              },
+              "answer": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "question",
+              "answer"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        },
+        "leftovers": {
+          "type": "string"
+        },
+        "flavorOptions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/FlavorOption"
+          },
+          "minItems": 0
+        },
+        "selectedOptionIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0
+        },
+        "defaultOptionIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "servings",
+        "title",
+        "mealRole",
+        "composition",
+        "flavorNote",
+        "prerequisites",
+        "ingredients",
+        "steps",
+        "time",
+        "equipment",
+        "troubleshooting",
+        "leftovers",
+        "flavorOptions",
+        "selectedOptionIds",
+        "defaultOptionIds"
+      ],
+      "additionalProperties": false
+    },
+    "Alternative": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "targetMealId": {
+          "type": "string"
+        },
+        "targetVariantId": {
+          "type": "string"
+        },
+        "explanation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "reason",
+        "targetMealId",
+        "targetVariantId",
+        "explanation"
+      ],
+      "additionalProperties": false
+    },
+    "Variant": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "rev": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "mealId": {
+          "type": "string"
+        },
+        "plans": {
+          "type": "object",
+          "properties": {
+            "1": {
+              "$ref": "#/$defs/Plan"
+            },
+            "2": {
+              "$ref": "#/$defs/Plan"
+            }
+          },
+          "required": [
+            "1"
+          ],
+          "additionalProperties": false
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Alternative"
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "id",
+        "rev",
+        "mealId",
+        "plans",
+        "alternatives"
+      ],
+      "additionalProperties": false
+    },
+    "Snapshot": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "schemaVersion": {
+          "const": 1
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/Source"
+        },
+        "resolvedPlan": {
+          "$ref": "#/$defs/Plan"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "schemaVersion",
+        "createdAt",
+        "source",
+        "resolvedPlan",
+        "note"
+      ],
+      "additionalProperties": false
+    },
+    "PersonalVersion": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/Snapshot"
+        },
+        "parentPersonalId": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "createdAt",
+        "snapshot",
+        "parentPersonalId"
+      ],
+      "additionalProperties": false
+    },
+    "Catalog": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "contentRelease": {
+          "type": "string"
+        },
+        "recipes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Recipe"
+          },
+          "minItems": 1
+        },
+        "meals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Meal"
+          },
+          "minItems": 1
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Variant"
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "contentRelease",
+        "recipes",
+        "meals",
+        "variants"
+      ],
+      "additionalProperties": false
+    },
+    "ContentRef": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "public",
+            "personal"
+          ]
+        },
+        "mealId": {
+          "type": "string"
+        },
+        "variantId": {
+          "type": "string"
+        },
+        "personalId": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "mealId",
+        "variantId",
+        "personalId"
+      ],
+      "additionalProperties": false
+    },
+    "RecentView": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/ContentRef"
+        },
+        "viewedAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "target",
+        "viewedAt"
+      ],
+      "additionalProperties": false
+    },
+    "Pinned": {
+      "type": "object",
+      "properties": {
+        "snapshot": {
+          "$ref": "#/$defs/Snapshot"
+        },
+        "pinnedAt": {
+          "type": "string"
+        },
+        "localDateAtPin": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "snapshot",
+        "pinnedAt",
+        "localDateAtPin"
+      ],
+      "additionalProperties": false
+    },
+    "Execution": {
+      "type": "object",
+      "properties": {
+        "snapshot": {
+          "$ref": "#/$defs/Snapshot"
+        },
+        "stepId": {
+          "type": "string"
+        },
+        "offsetPx": {
+          "type": "number",
+          "minimum": 0
+        },
+        "viewedAt": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "snapshot",
+        "stepId",
+        "offsetPx",
+        "viewedAt",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "Timer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "stepId": {
+          "type": "string"
+        },
+        "startedAt": {
+          "type": "number",
+          "minimum": 0
+        },
+        "dueAt": {
+          "type": "number",
+          "minimum": 0
+        },
+        "durationSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "executionId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "id",
+        "executionId",
+        "stepId",
+        "startedAt",
+        "dueAt",
+        "durationSeconds"
+      ],
+      "additionalProperties": false
+    },
+    "LegacyArchive": {
+      "type": "object",
+      "properties": {
+        "sourceKey": {
+          "const": "shiyoushu.app.v3"
+        },
+        "rawV3": {
+          "type": "string"
+        },
+        "migratedAt": {
+          "type": "string"
+        },
+        "report": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourcePath": {
+                "type": "string"
+              },
+              "result": {
+                "enum": [
+                  "mapped",
+                  "readonly",
+                  "archived"
+                ]
+              },
+              "targetId": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sourcePath",
+              "result",
+              "targetId",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "sourceKey",
+        "rawV3",
+        "migratedAt",
+        "report"
+      ],
+      "additionalProperties": false
+    },
+    "Store": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "const": 4
+        },
+        "contentReleaseLastSeen": {
+          "type": "string"
+        },
+        "modifiedAt": {
+          "type": "string"
+        },
+        "favorites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ContentRef"
+          },
+          "minItems": 0
+        },
+        "recentViews": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RecentView"
+          },
+          "maxItems": 12
+        },
+        "pinned": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Pinned"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "personalVersions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PersonalVersion"
+          },
+          "minItems": 0
+        },
+        "execution": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Execution"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timer": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Timer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "legacyArchive": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LegacyArchive"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "importedTimers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Timer"
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "contentReleaseLastSeen",
+        "modifiedAt",
+        "favorites",
+        "recentViews",
+        "pinned",
+        "personalVersions",
+        "execution",
+        "timer",
+        "legacyArchive",
+        "importedTimers"
+      ],
+      "additionalProperties": false
+    },
+    "Backup": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "shiyoushu-backup"
+        },
+        "formatVersion": {
+          "const": 1
+        },
+        "exportedAt": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/$defs/Store"
+        }
+      },
+      "required": [
+        "format",
+        "formatVersion",
+        "exportedAt",
+        "state"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
