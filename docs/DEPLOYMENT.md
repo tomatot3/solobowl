@@ -15,11 +15,11 @@
 
 ## 第一次运行
 
-```bash
-npm run build
-npm run service:start
-npm run service:status
-npm run autostart:install
+```powershell
+.\solobowl.cmd build
+.\solobowl.cmd start
+.\solobowl.cmd status
+.\solobowl.cmd autostart-install
 ```
 
 浏览器打开本机首页，确认图片、菜名和做法可以加载。`service:status` 同时查询后台进程和实际 HTTP 服务。
@@ -28,19 +28,19 @@ Windows 自启使用当前用户的 Startup 快捷方式，调用隐藏启动脚
 
 ## 更新网站
 
-```bash
+```powershell
 git pull --ff-only
-npm run build
-npm run service:restart
+.\solobowl.cmd build
+.\solobowl.cmd restart
 ```
 
 端口保持 8797。浏览器记录随来源保存，更新代码不需要清空 localStorage。
 
 ## 停止与撤销自启
 
-```bash
-npm run service:stop
-npm run autostart:remove
+```powershell
+.\solobowl.cmd stop
+.\solobowl.cmd autostart-remove
 ```
 
 这两个命令只处理 SoloBowl。停止网站不删除用户浏览器中的收藏与做法。

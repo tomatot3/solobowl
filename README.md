@@ -6,29 +6,29 @@
 
 ## 开始使用
 
-需要 Node.js 22 或更新版本，无第三方运行依赖。
+需要 Node.js 22 或更新版本，无第三方运行依赖。Windows 可直接用 solobowl.cmd；它优先使用已安装的 Node.js，也兼容当前 Codex 配套运行时，无需 npm。
 
-```bash
-npm run build
-npm start
+```powershell
+.\solobowl.cmd build
+.\solobowl.cmd server
 ```
 
 打开 `http://127.0.0.1:8797`。构建同时生成 `dist/solobowl.html`，可以单独打开演示。
 
 ## Windows 后台运行
 
-```bash
-npm run service:start
-npm run service:status
-npm run service:stop
-npm run service:restart
+```powershell
+.\solobowl.cmd start
+.\solobowl.cmd status
+.\solobowl.cmd stop
+.\solobowl.cmd restart
 ```
 
 后台进程隐藏运行，网站进程异常退出后约 5 秒重新启动。手动停止会一并停止看守进程。日志和 PID 放在 `.runtime/`。
 
-```bash
-npm run autostart:install
-npm run autostart:remove
+```powershell
+.\solobowl.cmd autostart-install
+.\solobowl.cmd autostart-remove
 ```
 
 安装后，在当前 Windows 用户登录时启动。部署到新的机器或更换 Node.js 路径后，重新运行安装命令。

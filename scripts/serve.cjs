@@ -4,7 +4,7 @@ const port=8797,version=require('../package.json').version;
 const routes={'/':'index.html','/legacy-v3/':'legacy-v3/index.html'};
 for(const name of ['index.html','solobowl.html','style.css','content.js','resolver.js','store.js','timer.js','illustrations.js','views.js','app.js'])routes['/'+name]=name;
 for(const name of ['index.html','style.css','recipes.js','journey.js','app.js'])routes['/legacy-v3/'+name]='legacy-v3/'+name;
-if(!fs.existsSync(path.join(dist,'index.html')))throw new Error('Run npm run build first.');
+if(!fs.existsSync(path.join(dist,'index.html')))throw new Error('Run solobowl.cmd build first.');
 const server=http.createServer((req,res)=>{
  if(!['GET','HEAD'].includes(req.method)){res.writeHead(405,{'Allow':'GET, HEAD'});res.end();return;}
  const route=new URL(req.url,'http://localhost').pathname;

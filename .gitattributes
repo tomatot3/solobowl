@@ -7,3 +7,4 @@
 *.md text eol=lf
 *.csv text eol=lf
 *.docx binary
+*.cmd text eol=crlf

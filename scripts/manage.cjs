@@ -6,7 +6,7 @@ function health(){return new Promise((resolve,reject)=>{const req=http.get('http
 async function status(){let supervisor=null,website=null;try{supervisor=JSON.parse(await request('status'));}catch{}try{website=await health();}catch{}return {supervisor,website,url:'http://127.0.0.1:8797'};}
 async function start(){
  const before=await status();if(before.supervisor){console.log(JSON.stringify(before));return;}
- if(!fs.existsSync(path.join(root,'dist/index.html')))throw new Error('Run npm run build first.');
+ if(!fs.existsSync(path.join(root,'dist/index.html')))throw new Error('Run solobowl.cmd build first.');
  fs.mkdirSync(runtime,{recursive:true});const log=fs.openSync(path.join(runtime,'supervisor.log'),'a');
  const proc=spawn(process.execPath,[path.join(__dirname,'supervisor.cjs')],{cwd:root,windowsHide:true,detached:true,stdio:['ignore',log,log]});proc.unref();fs.closeSync(log);
  for(let i=0;i<24;i++){await pause(250);const s=await status();if(s.website&&s.supervisor&&s.website.pid===s.supervisor.serverPid){console.log(JSON.stringify(s));return;}}
