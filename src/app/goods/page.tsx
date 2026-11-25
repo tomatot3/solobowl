@@ -1,0 +1,1 @@
+export default function Goods(){return <main><p className="eyebrow">食养好物</p><h1>围绕一餐的日常</h1><section className="panel"><h2>食材与器具介绍</h2><p>这里将整理与菜谱相关的食材和器具信息，供你了解与选择。</p><p className="note">当前提供介绍，不提供下单或支付。</p></section><a href="/kitchen">返回厨房</a></main>;}

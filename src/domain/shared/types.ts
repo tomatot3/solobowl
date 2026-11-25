@@ -1,0 +1,11 @@
+import type { Decimal } from "decimal.js";
+type Brand<T, Name extends string> = T & {readonly __brand: Name};
+export type EntityId = Brand<string,"EntityId">;
+export type AccountId = Brand<string,"AccountId">;
+export type GuestOwnerId = Brand<string,"GuestOwnerId">;
+export type Revision = Brand<number,"Revision">;
+export type UTCInstant = Brand<string,"UTCInstant">;
+export type Owner = {kind:"account";id:AccountId}|{kind:"guest";id:GuestOwnerId};
+export type KnownQuantity = Decimal;
+export type Quantity = KnownQuantity | null;
+export type MutableEntity = {id:EntityId;owner:Owner;revision:Revision;createdAt:UTCInstant;updatedAt:UTCInstant};

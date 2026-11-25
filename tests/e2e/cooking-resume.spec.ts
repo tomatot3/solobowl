@@ -1,0 +1,57 @@
+import {expect,test} from "@playwright/test";
+import {fixtureId,recipeFixture} from "../fixtures/recipes";
+
+test("a guest checks availability, shops, resumes the timer, and records completion",async({page})=>{
+  test.setTimeout(75000);
+  const fixture=recipeFixture(1,"published",{name:"测试用小米粥"});
+  const step={...fixture.version.steps[0]!,durationSeconds:600,instruction:"保持微沸并搅拌",timerStartCue:"微沸后开始计时",safetyNotice:"小心蒸汽烫伤"};
+  const last={...step,id:fixtureId(120),order:2,durationSeconds:null,timerStartCue:null,instruction:"确认食物状态"};
+  const recipe={...fixture,version:{...fixture.version,steps:[step,last]}};
+  await page.route("**/api/v1/auth/session", route=>route.fulfill({status:401,json:{error:{code:"AUTH_REQUIRED"}}}));
+  await page.route("**/api/v1/recipes/*/versions/*",route=>route.fulfill({json:{data:recipe}}));
+  let available=false;
+  await page.route("**/api/v1/recipe-versions/*/availability",route=>route.fulfill({json:{data:{
+    allowed:available,contentHash:fixture.version.contentHash,checkedAt:new Date().toISOString(),
+  }}}));
+  await page.goto("/recipes/"+fixture.recipe.id+"?version="+fixture.version.id);
+  await page.getByRole("button",{name:"加入待做"}).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("暂不可加入待做");
+  await expect(page).toHaveURL(/\/recipes\//);
+  available=true;
+  await page.getByRole("button",{name:"加入待做"}).click();
+  await expect(page).toHaveURL(/\/cooking\/[a-f0-9-]+$/);
+  const taskUrl=page.url();
+  await page.getByRole("link",{name:"为这道菜列采购清单"}).click();
+  await page.getByRole("button",{name:"生成采购清单"}).click();
+  await expect(page.getByText("菜谱用量 100 克")).toBeVisible();
+  await page.goto(taskUrl);
+  await page.getByLabel("审核份量").selectOption(fixture.version.servingOptions[1]!.id);
+  await expect(page.getByText("TEST ONLY 180 g")).toBeVisible();
+  await page.getByRole("button",{name:"开始做饭"}).click();
+  await expect(page.getByRole("progressbar",{name:"跟做进度"})).toHaveAttribute("value","1");
+  await expect(page.getByText("保持微沸并搅拌")).toBeVisible();
+  await expect(page.getByText("计时起点 微沸后开始计时")).toBeVisible();
+  await expect(page.getByText("小心蒸汽烫伤")).toBeVisible();
+  const preparation=page.locator("details.cook-preparation");
+  await expect(preparation).toBeAttached();
+  await expect(preparation.getByLabel("审核份量")).toBeHidden();
+  await preparation.locator("summary").click();
+  await expect(preparation.getByLabel("审核份量")).toBeVisible();
+  await page.getByRole("button",{name:"启动计时（600 秒）"}).click();
+  await expect(page.getByRole("timer")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("timer")).toBeVisible();
+  await page.getByRole("button",{name:"确认，下一步"}).click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute("value","2");
+  await expect(page.getByText("此步骤暂无审核计时。")).toBeVisible();
+  await page.getByRole("button",{name:"上一步"}).click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute("value","1");
+  await page.getByRole("button",{name:"确认，下一步"}).click();
+  page.once("dialog",dialog=>dialog.accept());
+  await page.getByRole("button",{name:"确认完成"}).click();
+  await expect(page.getByRole("heading",{name:"这一餐做好了"})).toBeVisible();
+  await page.getByRole("button",{name:"保存反馈"}).click();
+  await expect(page.getByText("反馈已保存。")).toBeVisible();
+  await page.getByRole("link",{name:"查看做饭记录"}).click();
+  await expect(page.getByRole("heading",{name:"测试用小米粥"})).toBeVisible();
+});
