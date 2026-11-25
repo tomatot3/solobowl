@@ -3,6 +3,8 @@ import {PortUnavailableError} from "../../domain/shared/ports";
 const definitions={
  AUTH_REQUIRED:{status:401,message:"请先登录",retryable:false},
  INVALID_CREDENTIALS:{status:401,message:"邮箱或密码不正确，或邮箱尚未验证",retryable:false},
+ INVALID_ACCOUNT_CREDENTIALS:{status:401,message:"账号名或密码不正确",retryable:false},
+ USERNAME_TAKEN:{status:409,message:"这个账号名已被使用，请换一个",retryable:false},
  INVALID_AUTH_TOKEN:{status:422,message:"此链接无效、已使用或已过期",retryable:false},
  MAIL_UNAVAILABLE:{status:503,message:"邮件服务暂不可用，请稍后再试",retryable:true},
  EMAIL_VERIFICATION_REQUIRED:{status:403,message:"请先验证邮箱",retryable:false},

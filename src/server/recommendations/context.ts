@@ -1,5 +1,6 @@
 import type {EligibilityContext} from "../../domain/recommendations/eligibility";
 import {getAuthService} from "../auth/runtime";
+import {hasAccountCredentials} from "../auth/account-access";
 import {getDatabasePool} from "../db/connection";
 import {ApiError} from "../http/envelope";
 import {genericContext} from "../recipes/availability";
@@ -9,7 +10,7 @@ export async function resolveAccess(request:Request):Promise<AccessResolution>{
   const credentials=request.headers.has("authorization")||/(?:^|;\s*)(?:__Secure-)?better-auth\.session_token=/.test(request.headers.get("cookie")??"");
   if(!credentials)return {kind:"guest"};
   const session=await getAuthService().resolveSession(request);
-  if(!session?.emailVerified)throw new ApiError("AUTH_REQUIRED");
+  if(!session||!hasAccountCredentials(session))throw new ApiError("AUTH_REQUIRED");
   return {kind:"account",...await accountRecommendationContext(getDatabasePool(),session.accountId)};
 }
 

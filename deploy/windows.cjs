@@ -32,6 +32,7 @@ function makeConfig(domain) {
     `APP_BASE_URL=https://${domain.toLowerCase()}`,
     `DATABASE_URL=postgresql://${appRole}:${appPassword}@${host}:${databasePort}/${database}`,
     `AUTH_SECRET=${authSecret}`,
+    'AUTH_LOGIN_MODE=username',
     `POSTGRES_ADMIN_PASSWORD=${adminPassword}`,
     'MAIL_TRANSPORT=disabled',
     'AI_MODE=disabled',

@@ -2,13 +2,14 @@ import type {AccountId,Owner} from "../../domain/shared/types";
 import {accountId} from "../../domain/shared/validation";
 import {ApiError,handleApi,createMeta} from "./envelope";
 import {systemClock,type Clock} from "../../domain/calendar/clock";
-export type TrustedSession={accountId:AccountId;emailVerified:boolean;expiresAt:Date};
+import {hasAccountCredentials} from "../auth/account-access";
+export type TrustedSession={accountId:AccountId;emailVerified:boolean;username?:string|null;expiresAt:Date};
 export type SessionResolver=(request:Request)=>Promise<TrustedSession|null>;
 export type AccountContext={kind:"account";id:AccountId};
 export async function requireAccountSession(request:Request,resolveSession:SessionResolver,now=new Date()):Promise<AccountContext>{
  const session=await resolveSession(request);
  if(!session||!Number.isFinite(session.expiresAt.getTime())||session.expiresAt.getTime()<=now.getTime())throw new ApiError("AUTH_REQUIRED");
- if(session.emailVerified!==true)throw new ApiError("EMAIL_VERIFICATION_REQUIRED");
+ if(!hasAccountCredentials(session))throw new ApiError("EMAIL_VERIFICATION_REQUIRED");
  try{return {kind:"account",id:accountId(session.accountId)};}catch{throw new ApiError("AUTH_REQUIRED");}
 }
 export function assertResourceOwner(context:AccountContext,resourceOwner:Owner|null):void{

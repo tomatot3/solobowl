@@ -3,6 +3,7 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().optional(), TEST_DATABASE_URL: z.string().optional(),
   APP_BASE_URL: z.url().refine(value=>["http:","https:"].includes(new URL(value).protocol)).default("http://127.0.0.1:3000"),
+  AUTH_LOGIN_MODE: z.enum(["email","username"]).default("email"),
   AUTH_SECRET: z.string().optional(), MAIL_TRANSPORT: z.enum(["disabled","capture","smtp"]).default("capture"),
   SMTP_HOST: z.string().regex(/^[a-z0-9.-]+$/i).optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),

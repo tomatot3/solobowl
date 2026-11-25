@@ -1,5 +1,6 @@
 import {createHmac, timingSafeEqual} from "node:crypto";
 import type pg from "pg";
+import {lockAccount} from "../auth/account-access";
 import {z} from "zod";
 import type {AccountId} from "../../domain/shared/types";
 import {systemClock} from "../../domain/calendar/clock";
@@ -36,10 +37,7 @@ function canonical(value: unknown): string {
 export function requestHash(secret: string, value: unknown): string {
   return createHmac("sha256",secret).update(canonical(value)).digest("base64url");
 }
-export async function lockAccount(client: pg.PoolClient,id: AccountId) {
-  const result=await client.query('SELECT id FROM "user" WHERE id=$1 AND "emailVerified" FOR UPDATE',[id]);
-  if (!result.rowCount) throw new ApiError("AUTH_REQUIRED");
-}
+export {lockAccount};
 
 export function createSyncService(pool: pg.Pool,secret: string) {
   function cursor(id: AccountId, sequence: string) {

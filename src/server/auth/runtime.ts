@@ -13,6 +13,7 @@ export function getAuthService() {
     if (!config.AUTH_SECRET || config.AUTH_SECRET.length < 32) throw new ApiError("NOT_READY");
     globals.shiyoushuAuth = createAuthService({
       pool: getDatabasePool(), baseUrl: config.APP_BASE_URL, secret: config.AUTH_SECRET,
+      loginMode: config.AUTH_LOGIN_MODE,
       mail: config.MAIL_TRANSPORT==="smtp"?smtpMailSender(config):localMailSender(config.MAIL_TRANSPORT,config.NODE_ENV,config.APP_BASE_URL),
     });
   }

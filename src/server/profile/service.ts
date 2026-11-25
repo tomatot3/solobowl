@@ -1,5 +1,6 @@
 import type pg from "pg";
 import type {AccountId} from "../../domain/shared/types";
+import {lockAccount as lock} from "../auth/account-access";
 import {emptyProfile, normalizeSection, NOTICE_VERSION, removedProfileValues, safetyFields, type Grant, type ProfileSection, type Profile, type Purpose, type Section} from "../../domain/profile/sections";
 import {ApiError} from "../http/envelope";
 import {withTransaction} from "../db/pool";
@@ -11,11 +12,6 @@ type Revision = {baseRevision: number; deletionGeneration: number};
 
 export function createProfileService(pool: pg.Pool, approvedOptions?: Options, transaction?: pg.PoolClient) {
   const transact = <T>(work: (client: pg.PoolClient) => Promise<T>) => transaction ? work(transaction) : withTransaction(pool,work);
-  async function lock(client: pg.PoolClient, id: AccountId) {
-    const result = await client.query('SELECT id FROM "user" WHERE id=$1 AND "emailVerified" FOR UPDATE', [id]);
-    if (!result.rowCount) throw new ApiError("AUTH_REQUIRED");
-  }
-
   async function readSection(client: pg.PoolClient, id: AccountId, section: Section) {
     return (await client.query<ProfileSection>(`SELECT state,payload AS values,consent_id AS "consentRef",
       revision,deletion_generation AS "deletionGeneration" FROM profile_section WHERE account_id=$1 AND section=$2`, [id,section])).rows[0];

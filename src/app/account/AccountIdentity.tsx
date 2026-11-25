@@ -32,7 +32,7 @@ export default function AccountIdentity() {
     <div>
       <h2>新食友</h2>
       <p className="note">{signedIn === null ? "正在读取账户状态…" : signedIn
-        ? "邮箱已登录 · 游客记录仍保存在当前浏览器"
+        ? "已登录 · 游客记录保存在当前浏览器"
         : "未登录 · 游客记录保存在当前浏览器"}</p>
     </div>
     {signedIn === false && <Link href="/account/login" className="button">登录 / 注册</Link>}

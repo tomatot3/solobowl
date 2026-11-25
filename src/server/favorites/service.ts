@@ -1,4 +1,5 @@
 import type pg from "pg";
+import {lockAccount} from "../auth/account-access";
 import type {AccountId,EntityId} from "../../domain/shared/types";
 import {withTransaction} from "../db/pool";
 import {ApiError} from "../http/envelope";
@@ -26,8 +27,7 @@ export function createFavoriteService(pool:pg.Pool,transaction?:pg.PoolClient) {
         WHERE f.account_id=$1 AND f.saved ORDER BY f.updated_at DESC,f.recipe_id`,[id])).rows;
     },
     change: (id:AccountId,recipeId:EntityId,options:{versionId?:EntityId;saved:boolean;baseRevision?:number;deletionGeneration?:number;merge?:boolean})=>transact(async client=>{
-      const locked=await client.query('SELECT id FROM "user" WHERE id=$1 AND "emailVerified" FOR UPDATE',[id]);
-      if(!locked.rowCount)throw new ApiError("AUTH_REQUIRED");
+      await lockAccount(client,id);
       const existing=await current(client,id,recipeId);
       if(options.merge&&existing?.deletionGeneration)throw new ApiError("DELETED_VALUE_CONFLICT");
       if(options.baseRevision!==undefined&&(existing?.revision??0)!==options.baseRevision)throw new ApiError("REVISION_CONFLICT");

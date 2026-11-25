@@ -5,15 +5,19 @@ import {z} from "zod";
 import {accountId} from "../../domain/shared/validation";
 import {assertJsonMutation, assertSafeWrite, type SessionResolver} from "../http/access";
 import {ApiError, failure, success} from "../http/envelope";
+import {hasAccountCredentials} from "./account-access";
 import type {MailSender} from "./mail";
-import {identitySchemaOptions} from "./schema-options";
+import {identitySchemaOptions, usernameEmailDomain, usernamePattern} from "./schema-options";
 
 const EMAIL_LINK_SECONDS = 30 * 60;
 const password = z.string().min(12).max(128);
-const email = z.email().max(254).transform(value => value.toLowerCase());
+const email = z.email().max(254).transform(value => value.toLowerCase()).refine(value => !value.endsWith(usernameEmailDomain));
+const username = z.string().trim().toLowerCase().regex(usernamePattern);
 const token = z.string().min(20).max(128).regex(/^[A-Za-z0-9_-]+$/);
 const login = z.object({email, password: z.string().min(1).max(128)}).strict();
 const registration = z.object({email, password}).strict();
+const usernameLogin = z.object({username, password: z.string().min(1).max(128)}).strict();
+const usernameRegistration = z.object({username, password}).strict();
 const address = z.object({email}).strict();
 const verification = z.object({token}).strict();
 const reset = z.object({token, newPassword: password}).strict();
@@ -22,9 +26,10 @@ function verificationKey(value: string) {
   return "email-confirm:" + createHash("sha256").update(value).digest("hex");
 }
 
-export function createAuthService({pool, baseUrl, secret, mail}: {
-  pool: pg.Pool; baseUrl: string; secret: string; mail?: MailSender;
+export function createAuthService({pool, baseUrl, secret, mail, loginMode = "email"}: {
+  pool: pg.Pool; baseUrl: string; secret: string; mail?: MailSender; loginMode?: "email" | "username";
 }) {
+  const usernameMode = loginMode === "username";
   const origin = new URL(baseUrl).origin;
   const basePath = "/api/v1/auth";
   const attempts = new Map<string, number>();
@@ -68,9 +73,10 @@ export function createAuthService({pool, baseUrl, secret, mail}: {
     trustedOrigins: [origin],
     logger: {disabled: true},
     rateLimit: {enabled: true, window: 60, max: 60},
-    emailVerification: {sendOnSignUp: true, sendOnSignIn: false, sendVerificationEmail: ({user}) => sendVerification(user)},
+    emailVerification: {sendOnSignUp: !usernameMode, sendOnSignIn: false, sendVerificationEmail: ({user}) => sendVerification(user)},
     emailAndPassword: {
       ...identitySchemaOptions.emailAndPassword,
+      requireEmailVerification: !usernameMode,
       autoSignIn: false,
       minPasswordLength: 12,
       maxPasswordLength: 128,
@@ -90,6 +96,7 @@ export function createAuthService({pool, baseUrl, secret, mail}: {
     return {
       accountId: accountId(session.user.id),
       emailVerified: session.user.emailVerified,
+      username: session.user.username ?? null,
       expiresAt: session.session.expiresAt,
     };
   };
@@ -101,7 +108,7 @@ export function createAuthService({pool, baseUrl, secret, mail}: {
          RETURNING value
        )
        UPDATE "user" SET "emailVerified"=true,"updatedAt"=now()
-       FROM redeemed WHERE id::text=redeemed.value AND NOT "emailVerified"
+       FROM redeemed WHERE id::text=redeemed.value AND NOT "emailVerified" AND username IS NULL
        RETURNING id`,
       [verificationKey(value)],
     );
@@ -120,8 +127,11 @@ export function createAuthService({pool, baseUrl, secret, mail}: {
   async function process(request: Request, action: string): Promise<Response> {
     if (action === "session" && request.method === "GET") {
       const session = await resolveSession(request);
-      if (!session) throw new ApiError("AUTH_REQUIRED");
+      if (!session || !hasAccountCredentials(session)) throw new ApiError("AUTH_REQUIRED");
       return success({userId: session.accountId, emailVerified: session.emailVerified, sessionExpiry: session.expiresAt});
+    }
+    if (usernameMode && (action.startsWith("verification/") || action.startsWith("password/reset-"))) {
+      throw new ApiError("RESOURCE_NOT_FOUND");
     }
     if (request.method !== "POST") throw new ApiError("RESOURCE_NOT_FOUND");
     assertSafeWrite(request, origin);
@@ -131,7 +141,7 @@ export function createAuthService({pool, baseUrl, secret, mail}: {
     let input: unknown;
     try { input = action === "logout" && !text ? {} : JSON.parse(text); }
     catch { throw new ApiError("INVALID_INPUT"); }
-    async function output(response: Response | Promise<Response>, code?: "INVALID_CREDENTIALS" | "INVALID_AUTH_TOKEN") {
+    async function output(response: Response | Promise<Response>, code?: "INVALID_CREDENTIALS" | "INVALID_ACCOUNT_CREDENTIALS" | "INVALID_AUTH_TOKEN") {
       const result = await response;
       if (result.ok) return result;
       if (result.status === 429) throw new ApiError("RATE_LIMITED");
@@ -141,6 +151,21 @@ export function createAuthService({pool, baseUrl, secret, mail}: {
     }
     switch (action) {
       case "register": {
+        if (usernameMode) {
+          const values = usernameRegistration.parse(input);
+          limit(action, values.username);
+          const result = await delegate(request, "/sign-up/email", {
+            ...values, email: values.username + usernameEmailDomain, name: "新食友",
+          });
+          if (result.status === 400 || result.status === 422) {
+            const body = await result.clone().json().catch(() => null);
+            if (["USERNAME_IS_ALREADY_TAKEN", "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"].includes(body?.code)) {
+              throw new ApiError("USERNAME_TAKEN");
+            }
+          }
+          await output(result);
+          return success({status: "registered"}, undefined, 201);
+        }
         const values = registration.parse(input);
         limit(action, values.email);
         requireMail();
@@ -148,16 +173,19 @@ export function createAuthService({pool, baseUrl, secret, mail}: {
         return success({status: "verification_required"}, undefined, 202);
       }
       case "login": {
-        const values = login.parse(input);
-        limit(action, values.email);
-        const result = await output(delegate(request, "/sign-in/email", values), "INVALID_CREDENTIALS");
-        const body = await result.json();
+        const values = usernameMode ? usernameLogin.parse(input) : login.parse(input);
+        limit(action, "username" in values ? values.username : values.email);
+        const invalidLogin = usernameMode ? "INVALID_ACCOUNT_CREDENTIALS" : "INVALID_CREDENTIALS";
+        const path = usernameMode ? "/sign-in/username" : "/sign-in/email";
+        const result = await output(delegate(request, path, values), invalidLogin);
         const cookies = result.headers.getSetCookie();
         const cookie = cookies.map(value => value.split(";")[0]).join("; ");
-        if (!body.user?.emailVerified || !cookie) throw new ApiError("INVALID_CREDENTIALS");
+        if (!cookie) throw new ApiError(invalidLogin);
         const session = await resolveSession(new Request(origin, {headers: {cookie}}));
-        if (!session?.emailVerified) throw new ApiError("NOT_READY");
-        const response = success({userId: session.accountId, emailVerified: true, sessionExpiry: session.expiresAt});
+        if (!session || ("username" in values ? session.username !== values.username : !session.emailVerified)) {
+          throw new ApiError(invalidLogin);
+        }
+        const response = success({userId: session.accountId, emailVerified: session.emailVerified, sessionExpiry: session.expiresAt});
         for (const value of cookies) response.headers.append("set-cookie", value);
         return response;
       }
