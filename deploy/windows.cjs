@@ -117,16 +117,30 @@ function migrate(env, output) {
   run(process.execPath, ['--import', 'tsx', 'deploy/migrate.ts', '--windows'], env, output);
 }
 
-async function serve(env, output) {
-  const code = await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start',
-      '--hostname', host, '--port', String(webPort)], {
-      cwd: root, env, windowsHide: true, stdio: ['ignore', output, output],
-    });
-    child.once('error', reject);
-    child.once('exit', code => resolve(code ?? 1));
+async function serve(env, output, watchTask) {
+  const child = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start',
+    '--hostname', host, '--port', String(webPort)], {
+    cwd: root, env, windowsHide: true, stdio: ['ignore', output, output],
   });
-  process.exitCode = code;
+
+  // Ending the scheduled task stops its WScript launcher. Close the web child when that launcher exits.
+  const launcherPid = process.ppid;
+  const timer = watchTask ? setInterval(() => {
+    try {
+      process.kill(launcherPid, 0);
+    } catch (error) {
+      if (error.code === 'ESRCH') child.kill();
+    }
+  }, 500) : undefined;
+
+  try {
+    process.exitCode = await new Promise((resolve, reject) => {
+      child.once('error', reject);
+      child.once('exit', code => resolve(code ?? 1));
+    });
+  } finally {
+    clearInterval(timer);
+  }
 }
 
 async function main() {
@@ -148,7 +162,7 @@ async function main() {
     const { env } = readConfig();
     startDatabase(output);
     migrate(env, output);
-    await serve(env, output);
+    await serve(env, output, process.argv[3] === '--watch-task');
   } catch (error) {
     fs.writeSync(output, `Start failed: ${error.code ?? error.message}\n`);
     process.exitCode = 1;

@@ -6,7 +6,7 @@ $runner = Join-Path $PSScriptRoot 'windows.cjs'
 $account = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 $runtime = Join-Path $env:LOCALAPPDATA 'ShiyoushuWeb'
 $launcher = Join-Path $runtime 'start-web.vbs'
-$command = ('"' + $node + '" "' + $runner + '" serve').Replace('"', '""')
+$command = ('"' + $node + '" "' + $runner + '" serve --watch-task').Replace('"', '""')
 
 if (-not (Test-Path -LiteralPath (Join-Path $runtime 'web.env'))) {
     throw 'Run windows.cjs prepare first.'
