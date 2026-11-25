@@ -11,8 +11,8 @@ export function stageContent(source:Workbook){
   return {staged,report};
 }
 
-export async function saveStagedContent(pool:pg.Pool,source:Workbook,{staged,report}:ReturnType<typeof stageContent>){
-  await withTransaction(pool,async client=>{
+export async function saveStagedContent(pool:pg.Pool,source:Workbook,{staged,report}:ReturnType<typeof stageContent>,transaction?:pg.PoolClient){
+  async function save(client:pg.PoolClient){
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended('shiyoushu.content.import',0))");
     await client.query("INSERT INTO content_import_batch(source_hash,source,report) VALUES($1,$2,$3) ON CONFLICT DO NOTHING",[source.sourceHash,source,report]);
     for(const draft of staged.drafts){
@@ -22,5 +22,6 @@ export async function saveStagedContent(pool:pg.Pool,source:Workbook,{staged,rep
         SELECT $1,$2,COALESCE(max(internal_revision),0)+1,$3,$4,$5,$6 FROM content_draft WHERE source_id=$1
         ON CONFLICT(source_id,raw_version,content_hash) DO NOTHING`,[draft.sourceId,draft.rawVersion,source.sourceHash,hash,draft.issues.some(issue=>issue.severity==="error")?"isolated":"pending",draft]);
     }
-  });
+  }
+  return transaction?save(transaction):withTransaction(pool,save);
 }

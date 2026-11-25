@@ -20,8 +20,8 @@ export const publicationInput=z.object({
   version:z.custom<RecipeVersion>(value=>Boolean(value)&&typeof value==="object"),
 }).strict();
 
-export async function publishReviewed(pool:pg.Pool,input:z.infer<typeof publicationInput>){
-  return withTransaction(pool,async client=>{
+export async function publishReviewed(pool:pg.Pool,input:z.infer<typeof publicationInput>,transaction?:pg.PoolClient){
+  async function publish(client:pg.PoolClient){
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended('shiyoushu.content.publish',0))");
     const draft=(await client.query<{source_id:string;raw_version:string;review_state:string;source_hash:string;content_hash:string;published_version_id:string|null;draft:Partial<StagedRecipe>}>(`SELECT source_id,raw_version,review_state,source_hash,content_hash,published_version_id,draft
       FROM content_draft WHERE id=$1 FOR UPDATE`,[input.draftId])).rows[0];
@@ -62,5 +62,6 @@ export async function publishReviewed(pool:pg.Pool,input:z.infer<typeof publicat
       [id,input.operatorRef,input.reviewRef+" / "+input.dictionaryReviewRef]);
     await client.query("UPDATE content_draft SET published_version_id=$1 WHERE id=$2",[id,input.draftId]);
     return {versionId:id,recipeId,contentHash};
-  });
+  }
+  return transaction?publish(transaction):withTransaction(pool,publish);
 }

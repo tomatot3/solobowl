@@ -1,4 +1,5 @@
 import {Decimal} from "decimal.js";
+import type {IngredientLine} from "../recipes/types";
 
 export type RawRow={row:number;cells:Record<string,string|number|boolean>};
 export type Binding={cell:string;media:string;sha256:string};
@@ -16,7 +17,40 @@ export function decimalSource(value:unknown):string|null {
   return result.toString();
 }
 
-function referencedOrdinals(raw:unknown):number[] {
+export function isCookingWater(row:RawRow):boolean {
+  return row.cells.M==="否"&&String(row.cells.N??"").startsWith("按需加水");
+}
+
+export function workbookAmount(row:RawRow):IngredientLine["amount"] {
+  const value=row.cells.E;
+  if(value===undefined||value===""){
+    if(isCookingWater(row))return {kind:"text",text:String(row.cells.N)};
+    throw new Error("MISSING_QUANTITY");
+  }
+  if(typeof value==="string"&&["适量","少许","少量","浸没食材"].includes(value.trim())){
+    return {kind:"text",text:value.trim()};
+  }
+  let quantity:string|null;
+  try{quantity=decimalSource(value);}catch{throw new Error("QUANTITY_NEEDS_REVIEW");}
+  if(quantity===null)throw new Error("MISSING_QUANTITY");
+  const unit=String(row.cells.F??"").trim();
+  if(!unit||unit==="—"||unit==="适量")throw new Error("MISSING_UNIT");
+  return {kind:"numeric",quantity,unit};
+}
+
+export function workbookStepTime(value:unknown):{seconds:number|null;note:string|null} {
+  const text=String(value??"").trim();
+  if(!text||text==="—")return {seconds:null,note:null};
+  if(/^(?:约\s*\d+(?:\.\d+)?(?:\s*[-–—~～]\s*\d+(?:\.\d+)?)?\s*分钟|\d+(?:\.\d+)?\s*分钟\s*（(?:估计|建议)）)$/.test(text)){
+    return {seconds:null,note:text};
+  }
+  const minutes=decimalSource(text.replace(/\s*分钟$/,""));
+  const seconds=minutes===null?NaN:new Decimal(minutes).times(60).toNumber();
+  if(!Number.isSafeInteger(seconds)||seconds>2147483647)throw new Error("INVALID_STEP_TIME");
+  return {seconds,note:null};
+}
+
+export function referencedOrdinals(raw:unknown):number[] {
   if(raw==null||raw===""||raw==="—")return [];
   return String(raw).split(/[、,，;；]/).flatMap(item=>{
     const match=item.trim().match(/^(\d+)(?:\s*[-–—~～]\s*(\d+))?$/);
@@ -77,19 +111,15 @@ export function stageWorkbook(workbook:Workbook){
     const lineNumbers=sequence(lines,"用料");
     sequence(directions,"步骤");
     for(const line of lines){
-      const value=line.cells.E;
-      if(value===undefined)issue("error","MISSING_QUANTITY","用料","E"+line.row);
-      else if(value!=="适量"){
-        try {
-          decimalSource(value);
-          if(!line.cells.F)issue("error","MISSING_UNIT","用料","F"+line.row);
-        }catch{issue("error","QUANTITY_NEEDS_REVIEW","用料","E"+line.row);}
+      try{workbookAmount(line);}catch(error){
+        const code=(error as Error).message;
+        issue("error",code,"用料",(code==="MISSING_UNIT"?"F":"E")+line.row);
       }
     }
     for(const step of directions){
       if(!step.cells.D)issue("error","MISSING_INSTRUCTION","步骤","D"+step.row);
       if(referencedOrdinals(step.cells.E).some(order=>!lineNumbers.has(order)))issue("error","UNRESOLVED_INGREDIENT_REFERENCE","步骤","E"+step.row);
-      try{decimalSource(step.cells.H);}catch{issue("error","INVALID_STEP_TIME","步骤","H"+step.row);}
+      try{workbookStepTime(step.cells.H);}catch{issue("error","INVALID_STEP_TIME","步骤","H"+step.row);}
     }
     const anchors=recipes.images.filter(image=>Number(image.cell.match(/\d+$/)?.[0])===row.row);
     if(!anchors.length)issue("warning","NO_ANCHORED_COVER","菜谱","AA"+row.row);

@@ -14,9 +14,9 @@ export const reviewConfig=z.object({
   calendar:calendar.optional(),
 }).strict();
 
-export function loadReviewConfig(pool:pg.Pool,input:z.input<typeof reviewConfig>){
+export function loadReviewConfig(pool:pg.Pool,input:z.input<typeof reviewConfig>,transaction?:pg.PoolClient){
   const data=reviewConfig.parse(input);
-  return withTransaction(pool,async client=>{
+  async function load(client:pg.PoolClient){
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended('shiyoushu.review.config',0))");
     for(const option of data.dictionary??[]){
       if(Date.parse(option.approvedAt)>Date.now())throw new Error("REVIEW_DATE_IN_FUTURE");
@@ -44,5 +44,6 @@ export function loadReviewConfig(pool:pg.Pool,input:z.input<typeof reviewConfig>
       await client.query("INSERT INTO calendar_active(singleton,calendar_version) VALUES(true,$1) ON CONFLICT(singleton) DO UPDATE SET calendar_version=EXCLUDED.calendar_version",[entries.version]);
     }
     return {dictionaryCount:data.dictionary?.length??0,calendarVersion:entries?.version??null};
-  });
+  }
+  return transaction?load(transaction):withTransaction(pool,load);
 }

@@ -19,3 +19,5 @@ Start-ScheduledTask -TaskName 'Shiyoushu Web'
 PostgreSQL 和网页分别监听 `127.0.0.1:55434` 和 `127.0.0.1:8797`。Cloudflare Tunnel 将域名转发到网页端口。`/healthz` 检查数据库连通性。计划任务在当前 Windows 用户登录后启动，每次启动网页前会检查并应用待执行的迁移。凭据、数据库数据和日志保存在 `%LOCALAPPDATA%\ShiyoushuWeb`。
 
 GitHub Actions 在 Windows 上验证构建。更新时从 `main` 获取变更，停止 `Shiyoushu Web` 计划任务，安装依赖并重新构建，再启动计划任务。正式数据库初始化后只有表结构，正式菜谱和历表由内容审核流程发布。
+
+`deploy/publish-workbook.ts` 使用正式库配置和本地批准清单，在一个事务中发布已审核的菜谱和历表。工作簿及审核资料留在维护机。迁移部署时随数据库备份 `public/content` 下已发布的封面。
