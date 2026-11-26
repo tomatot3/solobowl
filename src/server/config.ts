@@ -16,6 +16,7 @@ const schema = z.object({
   AI_NOTICE_URL: z.url().refine(value=>new URL(value).protocol==="https:").optional(),
   AI_PROCESSING_APPROVED: z.enum(["true","false"]).default("false"), DEEPSEEK_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  OPENAI_REASONING_EFFORT: z.enum(["none","minimal","low","medium","high","xhigh","max"]).optional(),
 });
 export type AppConfig = z.infer<typeof schema>;
 

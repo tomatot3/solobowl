@@ -7,9 +7,12 @@ const candidates:AiCandidate[]=[
   {recipeId:"r2",versionId:"v2",role:"alternative",factors:["winter_recipe"]},
 ];
 const json=()=>JSON.stringify({items:candidates.map(({factors,...item})=>({...item,reasonFactors:factors}))});
-it("uses the OpenAI Responses API and validates its structured reply",async()=>{
+it.each([
+  {model:"gpt-4.1-mini",effort:undefined},
+  {model:"gpt-6-luna",effort:"none"},
+])("uses the OpenAI Responses API and validates structured output for $model",async({model,effort})=>{
   const environment={
-    AI_MODE:"live",AI_PROVIDER:"openai",AI_MODEL:"gpt-4.1-mini",
+    AI_MODE:"live",AI_PROVIDER:"openai",AI_MODEL:model,OPENAI_REASONING_EFFORT:effort,
     AI_NOTICE_URL:"https://example.invalid/openai-notice",AI_PROCESSING_APPROVED:"true",
     DEEPSEEK_API_KEY:"other-test-key",
   };
@@ -27,11 +30,13 @@ it("uses the OpenAI Responses API and validates its structured reply",async()=>{
     const [url,request]=fetcher.mock.calls[0]!;
     expect(url).toBe("https://api.openai.com/v1/responses");
     expect(new Headers(request.headers).get("authorization")).toBe("Bearer openai-test-key");
-    expect(JSON.parse(String(request.body))).toMatchObject({
-      model:"gpt-4.1-mini",store:false,
+    const body=JSON.parse(String(request.body));
+    expect(body).toMatchObject({
+      model,store:false,
       input:JSON.stringify({candidates,term:"lidong",repair:false}),
       text:{format:{type:"json_schema",strict:true,schema:{additionalProperties:false,required:["items"]}}},
     });
+    expect(body.reasoning).toEqual(effort?{effort}:undefined);
   }finally{vi.unstubAllGlobals();}
 });
 it("rejects replaced primary, extra candidate fields and unsupported reasons",()=>{

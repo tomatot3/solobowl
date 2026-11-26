@@ -34,12 +34,14 @@ export function productionProvider(config = readConfig()): Provider | undefined 
   if (config.AI_MODE !== "live" || config.AI_PROCESSING_APPROVED !== "true" || !key || !model || !config.AI_NOTICE_URL) return;
 
   if (config.AI_PROVIDER === "openai") {
+    const effort = config.OPENAI_REASONING_EFFORT;
     return async (input, signal) => {
       const body = await postModelRequest("https://api.openai.com/v1/responses", key, {
         model,
         instructions,
         input: JSON.stringify(input),
         max_output_tokens: 400,
+        ...(effort ? { reasoning: { effort } } : {}),
         store: false,
         text: { format: { type: "json_schema", name: "recommendation_reasons", strict: true, schema: openAiSchema } },
       }, signal);
