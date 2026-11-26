@@ -20,6 +20,8 @@ PostgreSQL 和网页分别监听 `127.0.0.1:55434` 和 `127.0.0.1:8797`。Cloudf
 
 Windows 正式站的 `web.env` 使用 `AUTH_LOGIN_MODE=username`。使用账号名和密码注册、登录，账号记录继续按账号同步。邮件验证和邮件找回仅适用于邮箱模式。
 
+要使用 OpenAI 增强推荐理由，在本机 `%LOCALAPPDATA%\ShiyoushuWeb\web.env` 填写 `OPENAI_API_KEY`，并设置 `AI_PROVIDER=openai`、`AI_MODEL=gpt-4.1-mini`。将 `AI_NOTICE_URL` 指向正式域名下的 `/privacy/recommendation-enhancement` HTTPS 页面。确认告知内容后，将 `AI_PROCESSING_APPROVED` 设为 `true`、`AI_MODE` 设为 `live`，然后重启 `Shiyoushu Web`。登录后在档案页授权，再从厨房触发增强。
+
 GitHub Actions 在 Windows 上验证构建。更新时从 `main` 获取变更，停止 `Shiyoushu Web` 计划任务，安装依赖并重新构建，再启动计划任务。正式数据库初始化后只有表结构，正式菜谱和历表由内容审核流程发布。
 
 `deploy/publish-workbook.ts` 使用正式库配置和本地批准清单，在一个事务中发布已审核的菜谱和历表。工作簿及审核资料留在维护机。迁移部署时随数据库备份 `public/content` 下已发布的封面。

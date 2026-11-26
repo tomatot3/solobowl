@@ -8,7 +8,8 @@ import {NOTICE_VERSION,preferenceValues} from "../../domain/profile/sections";
 import {withTransaction} from "../db/pool";
 
 import {createProfileService} from "../profile/service";
-import {readAiConsent} from "../profile/ai-consent";
+import {readConfig} from "../config";
+import {aiNoticeVersion,readAiConsent} from "../profile/ai-consent";
 import {genericContext} from "../recipes/availability";
 
 
@@ -39,7 +40,7 @@ export function accountRecommendationContext(pool:pg.Pool,id:AccountId,existing?
     const preference=profile.sections.preferences;
     const values=preferenceValues.safeParse(preference?.values);
     const consent=profile.consents.some(grant=>grant.purpose==="preferences"&&grant.id===preference?.consentRef&&grant.noticeVersion===NOTICE_VERSION);
-    const ai=await readAiConsent(client,id,null);
+    const ai=await readAiConsent(client,id,null,aiNoticeVersion(readConfig().AI_PROVIDER));
     return {context,preferences:consent&&values.success?{...values.data,preferredMinutes:values.data.preferredMinutes??undefined}:undefined,aiConsent:ai.granted};
   };
   return existing?read(existing):withTransaction(pool,read);

@@ -1,10 +1,39 @@
 import {expect,it,vi} from "vitest";
 import {enhanceReasons,ProviderError,validateReasonReply,type AiCandidate} from "../../src/server/ai/enhance";
+import {productionProvider} from "../../src/server/ai/provider";
+import {readConfig} from "../../src/server/config";
 const candidates:AiCandidate[]=[
   {recipeId:"r1",versionId:"v1",role:"primary",factors:["season_term"]},
   {recipeId:"r2",versionId:"v2",role:"alternative",factors:["winter_recipe"]},
 ];
 const json=()=>JSON.stringify({items:candidates.map(({factors,...item})=>({...item,reasonFactors:factors}))});
+it("uses the OpenAI Responses API and validates its structured reply",async()=>{
+  const environment={
+    AI_MODE:"live",AI_PROVIDER:"openai",AI_MODEL:"gpt-4.1-mini",
+    AI_NOTICE_URL:"https://example.invalid/openai-notice",AI_PROCESSING_APPROVED:"true",
+    DEEPSEEK_API_KEY:"other-test-key",
+  };
+  expect(()=>readConfig(environment)).toThrow("configured server key");
+  const provider=productionProvider(readConfig({...environment,OPENAI_API_KEY:"openai-test-key"}))!;
+  const fetcher=vi.fn(async (_url:string,_init:RequestInit)=>Response.json({
+    status:"completed",
+    output:[{type:"message",role:"assistant",content:[{type:"output_text",text:json()}]}],
+  }));
+  vi.stubGlobal("fetch",fetcher);
+  try {
+    const result=await enhanceReasons(provider,candidates,"lidong");
+    expect(result).toMatchObject({status:"succeeded",calls:1});
+    expect(result.factors?.get("v1")).toEqual(["season_term"]);
+    const [url,request]=fetcher.mock.calls[0]!;
+    expect(url).toBe("https://api.openai.com/v1/responses");
+    expect(new Headers(request.headers).get("authorization")).toBe("Bearer openai-test-key");
+    expect(JSON.parse(String(request.body))).toMatchObject({
+      model:"gpt-4.1-mini",store:false,
+      input:JSON.stringify({candidates,term:"lidong",repair:false}),
+      text:{format:{type:"json_schema",strict:true,schema:{additionalProperties:false,required:["items"]}}},
+    });
+  }finally{vi.unstubAllGlobals();}
+});
 it("rejects replaced primary, extra candidate fields and unsupported reasons",()=>{
   expect(validateReasonReply({text:json(),finishReason:"stop"},candidates)?.size).toBe(2);
   for(const change of [

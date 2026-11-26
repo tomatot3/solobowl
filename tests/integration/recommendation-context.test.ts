@@ -11,7 +11,7 @@ import {createRecommendationHandler,resolvePreAuthAccess} from "../../src/server
 import {createClock} from "../../src/domain/calendar/clock";
 import {genericContext} from "../../src/server/recipes/availability";
 import {accountId} from "../../src/domain/shared/validation";
-import {setAiConsent} from "../../src/server/profile/ai-consent";
+import {aiNoticeVersion,setAiConsent} from "../../src/server/profile/ai-consent";
 import {accountRecommendationContext} from "../../src/server/recommendations/account-settings";
 describe("real HTTP guest requests against isolated database",()=>{
  it("filters transient safety input without persisting it and refuses forged owner",async()=>{
@@ -50,6 +50,7 @@ describe("real HTTP guest requests against isolated database",()=>{
  });
  it("persists model consent for one verified account and removes access when withdrawn",async()=>{
   const db=await isolatedSchema();
+  vi.stubEnv("AI_PROVIDER","deepseek");
   try{
    await runMigrations(db.pool,await loadMigrations());
    const first=accountId(randomUUID()),second=accountId(randomUUID());
@@ -60,9 +61,14 @@ describe("real HTTP guest requests against isolated database",()=>{
    expect((await setAiConsent(db.pool,first,notice,true)).granted).toBe(true);
    expect((await accountRecommendationContext(db.pool,first)).aiConsent).toBe(true);
    expect((await accountRecommendationContext(db.pool,second)).aiConsent).toBe(false);
-   expect((await setAiConsent(db.pool,first,null,false)).granted).toBe(false);
+   vi.stubEnv("AI_PROVIDER","openai");
+   const openAiNotice=aiNoticeVersion("openai");
+   expect((await accountRecommendationContext(db.pool,first)).aiConsent).toBe(false);
+   expect((await setAiConsent(db.pool,first,notice,true,openAiNotice)).granted).toBe(true);
+   expect((await accountRecommendationContext(db.pool,first)).aiConsent).toBe(true);
+   expect((await setAiConsent(db.pool,first,null,false,openAiNotice)).granted).toBe(false);
    expect((await accountRecommendationContext(db.pool,first)).aiConsent).toBe(false);
    expect((await accountRecommendationContext(db.pool,first)).preferences).toBeUndefined();
-  }finally{await db.close();}
+  }finally{vi.unstubAllEnvs();await db.close();}
  });
 });

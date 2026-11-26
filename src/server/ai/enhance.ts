@@ -8,7 +8,7 @@ export class ProviderError extends Error{
   constructor(readonly status:number,readonly retryAfterMs?:number){super("MODEL_PROVIDER_ERROR");}
 }
 type Result={status:"succeeded"|"fallback";code?:string;calls:number;factors?:ReadonlyMap<string,readonly Factor[]>};
-const output=z.object({items:z.array(z.object({
+export const reasonReplySchema=z.object({items:z.array(z.object({
   recipeId:z.string(),versionId:z.string(),role:z.enum(["primary","alternative"]),
   reasonFactors:z.array(z.enum(["season_term","winter_recipe","within_time_limit"])).min(1).max(3),
 }).strict()).max(3)}).strict();
@@ -17,7 +17,7 @@ export function validateReasonReply(reply:ProviderReply,candidates:readonly AiCa
   if(reply.finishReason==="length"||!reply.text.trim()||reply.text.length>12000)return null;
   let value:unknown;
   try{value=JSON.parse(reply.text);}catch{return null;}
-  const result=output.safeParse(value);
+  const result=reasonReplySchema.safeParse(value);
   if(!result.success||result.data.items.length!==candidates.length)return null;
   const byId=new Map(candidates.map(item=>[item.versionId,item]));
   const factors=new Map<string,readonly Factor[]>();

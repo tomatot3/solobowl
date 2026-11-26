@@ -6,8 +6,7 @@ import {getDatabasePool} from "../db/connection";
 import {assertJsonMutation, assertSafeWrite, requireAccountSession} from "../http/access";
 import {ApiError, failure, success} from "../http/envelope";
 import {createProfileService} from "./service";
-import {AI_NOTICE_VERSION} from "../../domain/profile/ai-consent";
-import {readAiConsent,setAiConsent} from "./ai-consent";
+import {aiNoticeVersion,readAiConsent,setAiConsent} from "./ai-consent";
 
 export async function profileHttp(request: Request, resource: "profile" | "consents", path: string[]) {
   try {
@@ -23,17 +22,18 @@ export async function profileHttp(request: Request, resource: "profile" | "conse
     const pool=getDatabasePool();
     if(resource==="consents"&&path.length===1&&path[0]==="ai"){
       const notice=config.AI_MODE==="live"?config.AI_NOTICE_URL??null:null;
-      if(request.method==="GET")return success(await readAiConsent(pool,id,notice));
+      const noticeVersion=aiNoticeVersion(config.AI_PROVIDER);
+      if(request.method==="GET")return success(await readAiConsent(pool,id,notice,noticeVersion));
       if(request.method==="POST"){
         const text=await request.text();
         if(text.length>1024)throw new ApiError("INVALID_INPUT");
         let input:unknown;
         try{input=JSON.parse(text);}catch{throw new ApiError("INVALID_INPUT");}
-        const parsed=z.object({accepted:z.literal(true),noticeVersion:z.literal(AI_NOTICE_VERSION)}).strict().safeParse(input);
+        const parsed=z.object({accepted:z.literal(true),noticeVersion:z.literal(noticeVersion)}).strict().safeParse(input);
         if(!parsed.success)throw new ApiError("INVALID_INPUT");
-        return success(await setAiConsent(pool,id,notice,true));
+        return success(await setAiConsent(pool,id,notice,true,noticeVersion));
       }
-      if(request.method==="DELETE")return success(await setAiConsent(pool,id,notice,false));
+      if(request.method==="DELETE")return success(await setAiConsent(pool,id,notice,false,noticeVersion));
       throw new ApiError("RESOURCE_NOT_FOUND");
     }
     const service = createProfileService(pool);

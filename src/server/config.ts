@@ -11,11 +11,19 @@ const schema = z.object({
   SMTP_FROM: z.email().optional(), SMTP_USER: z.string().min(1).optional(), SMTP_PASSWORD: z.string().min(1).optional(),
   SMTP_PROCESSING_APPROVED: z.enum(["true","false"]).default("false"),
   AI_MODE: z.enum(["disabled","mock","live"]).default("disabled"),
+  AI_PROVIDER: z.enum(["deepseek","openai"]).default("deepseek"),
   AI_MODEL: z.string().regex(/^[a-z0-9._-]{1,80}$/i).optional(),
   AI_NOTICE_URL: z.url().refine(value=>new URL(value).protocol==="https:").optional(),
   AI_PROCESSING_APPROVED: z.enum(["true","false"]).default("false"), DEEPSEEK_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
 });
 export type AppConfig = z.infer<typeof schema>;
+
+export function aiApiKey(config: AppConfig): string | undefined {
+  const key = (config.AI_PROVIDER === "openai" ? config.OPENAI_API_KEY : config.DEEPSEEK_API_KEY)?.trim();
+  return key && !/change_me|placeholder/i.test(key) ? key : undefined;
+}
+
 export function readConfig(env: Readonly<Record<string, string | undefined>> = process.env): AppConfig {
   const result = schema.safeParse(env);
   if (!result.success) throw new Error("Invalid configuration fields: " + result.error.issues.map(issue=>issue.path.join(".")).join(", "));
@@ -30,7 +38,7 @@ export function readConfig(env: Readonly<Record<string, string | undefined>> = p
     if (!config.AUTH_SECRET || config.AUTH_SECRET.length < 32 || /change_me|placeholder/i.test(config.AUTH_SECRET)) throw new Error("Production AUTH_SECRET requires a non-placeholder secret of at least 32 characters");
     if (config.MAIL_TRANSPORT === "capture" || config.AI_MODE === "mock") throw new Error("Production cannot use capture mail or mock AI");
   }
-  if (config.AI_MODE === "live" && (config.AI_PROCESSING_APPROVED !== "true" || !config.DEEPSEEK_API_KEY || /change_me|placeholder/i.test(config.DEEPSEEK_API_KEY))) throw new Error("Live AI requires approved processing notice and a configured server key");
+  if (config.AI_MODE === "live" && (config.AI_PROCESSING_APPROVED !== "true" || !aiApiKey(config))) throw new Error("Live AI requires approved processing notice and a configured server key");
   if(config.AI_MODE==="live"&&!config.AI_MODEL)throw new Error("Live AI requires AI_MODEL");
   if(config.AI_MODE==="live"&&!config.AI_NOTICE_URL)throw new Error("Live AI requires AI_NOTICE_URL");
   if(config.MAIL_TRANSPORT==="smtp"){
